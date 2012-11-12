@@ -1,0 +1,75 @@
+<html><head><title>S-HTTP-SERVER</title></head><body><h3>API for package S-HTTP-SERVER</h3>
+<blockquote>S-HTTP-SERVER is a minial standalone Common Lisp HTTP Server</blockquote>
+<p><b>*http-server-identification*</b>&nbsp;&nbsp;&nbsp;<i>variable</i></p>
+<blockquote>Identification string sent as value of the 'Server' HTTP Response Header</blockquote>
+<blockquote>Initial value: <tt>"S-HTTP-SERVER LispWorks 4.4.6"</tt></blockquote>
+<p><b>*http-server-port*</b>&nbsp;&nbsp;&nbsp;<i>variable</i></p>
+<blockquote>Default port used when creating a new S-HTTP-SERVER</blockquote>
+<blockquote>Initial value: <tt>"1701"</tt></blockquote>
+<p>(<b>find-handler</b> server http-request)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Given http-request select a handler from server</blockquote>
+<p>(<b>get-contexts</b> s-http-server)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the current list of context bindings used by this S-HTTP-SERVER</blockquote>
+<p>(<b>get-headers</b> http-request)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the dotted alist (:keyword . 'value') of request headers of this HTTP request</blockquote>
+<p>(<b>get-http-version</b> http-request)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the HTTP version string of this HTTP request</blockquote>
+<p>(<b>get-keep-alive</b> http-request)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Is this a keep-alive request (either 1.0 or 1.1)</blockquote>
+<p>(<b>get-log-stream</b> s-http-server)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the current stream used by this S-HTTP-SERVER for logging, nil means no logging</blockquote>
+<p>(setf (<b>get-log-stream</b> s-http-server) value)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Set the stream this S-HTTP-SERVER uses for logging, nil means no logging</blockquote>
+<p>(<b>get-method</b> http-request)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the method (keyword :get :put :post :delete ..) of this HTTP request</blockquote>
+<p>(<b>get-name</b> s-http-server)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the current name of this S-HTTP-SERVER</blockquote>
+<p>(setf (<b>get-name</b> s-http-server) value)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Set the name of this S-HTTP-SERVER</blockquote>
+<p>(<b>get-path</b> http-request)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the path of this HTTP request</blockquote>
+<p>(<b>get-port</b> s-http-server)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the TCP port used by this S-HTTP-SERVER</blockquote>
+<p>(<b>get-server-process</b> s-http-server)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the current server process used by this S-HTTP-SERVER, nil if not running</blockquote>
+<p>(<b>get-uri</b> http-request)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Get the URI object of this HTTP request</blockquote>
+<p>(<b>handle-http-server-connection</b> server connection-id client-socket-stream)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Handle a new connection request in a new process</blockquote>
+<p><b>http-request</b>&nbsp;&nbsp;&nbsp;<i>class</i></p>
+<blockquote>The object representing an HTTP request as being handled by the S-HTTP-SERVER</blockquote>
+<blockquote>Class precedence list: <tt> http-request standard-object t</tt></blockquote>
+<blockquote>Class init args: <tt> :keep-alive :headers :http-version :uri :method</tt></blockquote>
+<p>(<b>logm</b> server format-string &rest args)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Log a formatted message</blockquote>
+<p>(<b>make-s-http-server</b> &key (port *http-server-port*) (name s-http-server) (log-stream *standard-output*))&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Create a new object representing an S-HTTP-SERVER</blockquote>
+<p>(<b>register-context-handler</b> server context-prefix handler-function &key arguments at-end-p do-not-replace-p)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Configure server so that every request starting with context-prefix is sent to handler-function</blockquote>
+<p><b>s-http-server</b>&nbsp;&nbsp;&nbsp;<i>class</i></p>
+<blockquote>The object representing a minimal standalone HTTP Server</blockquote>
+<blockquote>Class precedence list: <tt> s-http-server standard-object t</tt></blockquote>
+<blockquote>Class init args: <tt> :contexts :log-stream :debug-mode :name :port</tt></blockquote>
+<p>(<b>s-http-server-handler</b> s-http-server handler http-request stream)&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>The builtin S-HTTP-SERVER testing/debugging handler returning a simple status/echo/snoop page</blockquote>
+<p>(<b>standard-http-html-error-response</b> http-request stream code reason extra)&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Generate and write a standard HTML error as HTTP Response using code, reason and extra</blockquote>
+<p>(<b>standard-http-html-message-response</b> http-request stream title message &optional (status 200) (string ok))&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Generate and write a standard HTML message as HTTP Response using title, message, status and string</blockquote>
+<p>(<b>standard-http-response-headers</b> http-request &key (content-type text/plain) content-length)&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Generate the standard headers alist given context-type and context-length, managing old-style Keep-Alive</blockquote>
+<p>(<b>start-server</b> server)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Start the server</blockquote>
+<p>(<b>static-resource-handler</b> s-http-server handler http-request stream)&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Host static resources from a document root</blockquote>
+<p>(<b>stop-server</b> server)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Stop the server</blockquote>
+<p>(<b>unregister-context-handler</b> server context-prefix &key only-first-p only-last-p)&nbsp;&nbsp;&nbsp;<i>generic-function</i></p>
+<blockquote>Remove any configuration of server for context-prefix</blockquote>
+<p>(<b>write-http-response-headers</b> headers stream)&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Write the headers alist as HTTP Response Headers to stream</blockquote>
+<p>(<b>write-http-response-line</b> string &optional (stream *standard-output*))&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Write string to stream, ending with the HTTP end of line convention (CR+LF)</blockquote>
+<p>(<b>write-http-response-status-line</b> stream &optional (status-code 200) (string ok) (http-version http/1.1))&nbsp;&nbsp;&nbsp;<i>function</i></p>
+<blockquote>Write an HTTP Response Status line to stream, using status-code string and http-version</blockquote>
+<font size=-1><p>Documentation generated by <a href="http://homepage.mac.com/svc/lispdoc/">lispdoc</a> running on LispWorks</p></font></body></html>
