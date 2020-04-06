@@ -2,7 +2,7 @@
 ;;;;
 ;;;; Globally defined variable and parameters, both public and internal, for S-HTTP[S]-SERVER
 ;;;;
-;;;; Copyright (C) 2005-2009 Sven Van Caekenberghe, Beta Nine BVBA.
+;;;; Copyright (C) 2005-2009,2020 Sven Van Caekenberghe, Beta Nine BVBA.
 ;;;;
 ;;;; You are granted the rights to distribute and use this software
 ;;;; as governed by the terms of the Lisp Lesser General Public License
@@ -25,20 +25,11 @@
 (defparameter +access-log-format+ :common-log-format
   "Either :common-log-format or :extended-common-log-format")
 
-(defparameter +pool-connections+ #+lispworks nil #-lispworks nil
-  "If t, pool connections, reusing processes and resources")
-
 (defparameter +period-check-interval+ 5
   "Do some periodic checks every 5 seconds")
 
 (defparameter +allowed-connection-keepalive-age+ 15
   "Number of seconds a kept alive connection is allowed to be inactive (Apache default)")
-
-(defparameter +allowed-connection-pooled-age+ (* 60 60)
-  "Number of seconds a pooled connection is allowed to exist")
-
-(defparameter +allowed-pooled-connections+ 8
-  "Maximum number of inactive connections allowed in the pool")
 
 (defparameter +allowed-keepalive-connections+ 32
   "Maximum number of simulataneous kept alive connections (hard resoure limit)")

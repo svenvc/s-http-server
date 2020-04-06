@@ -17,7 +17,6 @@
    #:start-server
    #:stop-server
    #:ps
-   #:toggle-connection-pooling
    #:register-context-handler
    #:unregister-context-handler
    #:*http-server-identification*

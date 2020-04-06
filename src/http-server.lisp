@@ -2,7 +2,7 @@
 ;;;;
 ;;;; This is a small standalone Common Lisp HTTP Server
 ;;;;
-;;;; Copyright (C) 2005-2009 Sven Van Caekenberghe, Beta Nine BVBA.
+;;;; Copyright (C) 2005-2009,2020 Sven Van Caekenberghe, Beta Nine BVBA.
 ;;;;
 ;;;; You are granted the rights to distribute and use this software
 ;;;; as governed by the terms of the Lisp Lesser General Public License
@@ -65,7 +65,7 @@
 
 (defclass http-connection ()
   ((id :accessor get-id :initarg :id :initform -1)
-   (state :accessor get-state :initform :new :type (member :new :active :pooled :dead))
+   (state :accessor get-state :initform :new :type (member :new :active :dead))
    (stream :accessor get-stream :initarg :stream :initform nil)
    (process :accessor get-process :initarg :process :initform nil)
    (line-buffer :accessor get-line-buffer :initform (make-array 256 :element-type 'character :adjustable t))
@@ -182,7 +182,7 @@
 (defmethod stop-server ((s-http-server s-http-server))
   (let ((process (get-server-process s-http-server)))
     (when process
-      (cleanup-connections s-http-server :do-not-pool t)
+      (cleanup-connections s-http-server)
       (setf (get-http-connections s-http-server) nil)
       (s-sysdeps:kill-process process)
       (setf (get-server-process s-http-server) nil
@@ -266,46 +266,31 @@
 ;; connection & process/thread management
 
 (defmethod handle-new-http-server-connection ((s-http-server s-http-server) socket-stream connection-id)
-  (let ((connection (when +pool-connections+
-                      (find-if (lambda (c) 
-                                 (and (eql (get-state c) :pooled)
-                                      (get-process c)
-                                      #+lispworks(mp:process-stopped-p (get-process c))))
-                               (get-http-connections s-http-server)))))
-    (if connection
-        (progn
-          (logm s-http-server :debug "Reusing ~s" connection)
-          (setf (get-stream connection) socket-stream)
-          #+lispworks (mp:process-unstop (get-process connection))
-          #-lispworks (eror "Connection reuse not yet implemeted"))
-      (let ((new-connection-id (funcall connection-id)))
-        (logm s-http-server :debug "Creating new connection handler")
-        (let* ((new-connection (make-instance 'http-connection 
-                                              :id new-connection-id
-                                              :stream socket-stream
-                                              :server s-http-server))
-               (new-process (s-sysdeps:run-process (format nil "connection-handler-~d" new-connection-id)
-                                                   'handle-http-server-connection 
-                                                   s-http-server
-                                                   new-connection)))
-          (setf (get-process new-connection) new-process)
-          (push new-connection (get-http-connections s-http-server)))))))
+  (let ((new-connection-id (funcall connection-id)))
+    (logm s-http-server :debug "Creating new connection handler")
+    (let* ((new-connection (make-instance 'http-connection 
+					  :id new-connection-id
+					  :stream socket-stream
+					  :server s-http-server))
+	   (new-process (s-sysdeps:current-process)))
+      (setf (get-process new-connection) new-process)
+      (push new-connection (get-http-connections s-http-server))
+      (handle-http-server-connection s-http-server new-connection))))
   
-(defmethod kill-connection ((http-connection http-connection) &optional do-not-pool)
+(defmethod kill-connection ((http-connection http-connection))
   (with-slots (process stream http-server state)
       http-connection
     (when stream
-      (logm http-server :debug "Closing ~a" stream)
-      (ignore-errors 
-        (close stream :abort t))
+      (logm http-server :debug "Closing ~a (delayed)" stream)
+      ;; the connection will be closed automatically
+      #+nil(ignore-errors 
+	     (close stream :abort t))
       (setf stream nil))
     (when process 
-      (if (or (not +pool-connections+) do-not-pool)
-          (progn
-            (logm http-server :debug "Killing ~a" process)
-            (s-sysdeps:kill-process process)
-            (setf process nil state :dead))
-        (setf state :pooled)))))
+      (logm http-server :debug "Killing ~a (delayed)" process)
+      ;; the process will stop automatically
+      #+nil(s-sysdeps:kill-process process)
+      (setf process nil state :dead))))
 
 ;; internal (periodic) tasks
 
@@ -315,14 +300,12 @@
       (logm s-http-server :debug "Running periodic tasks")
       (cleanup-dead-connections s-http-server)
       (cleanup-old-connections s-http-server)
-      (cleanup-old-pooled-connections s-http-server)
-      (cleanup-excess-pooled-connections s-http-server)
       (cleanup-excess-alive-connections s-http-server)
       (flush-log-streams s-http-server)
       (setf (get-last-periodic-check s-http-server) now))))
 
 (defmethod cleanup-connections ((s-http-server s-http-server) 
-                                &key (filter 'identity) (selector 'identity) do-not-pool (threshold 0))
+                                &key (filter 'identity) (selector 'identity) (threshold 0))
   (let* ((all-connections (get-http-connections s-http-server))
          (filtered-connections (remove-if-not filter all-connections))
          (connections-to-remove (when (< threshold (length filtered-connections))
@@ -331,19 +314,17 @@
       (setf connections-to-remove (subseq connections-to-remove 0 (- (length connections-to-remove) threshold))))
     (when connections-to-remove
       (loop :for connection :in connections-to-remove :do
-            (logm s-http-server :debug "Cleaning up ~s [~a]" connection (if do-not-pool :do-not-pool :pool))
-            (kill-connection connection do-not-pool))
-      (when (or (not +pool-connections+) do-not-pool)
-        (setf (get-http-connections s-http-server) 
-              (set-difference (get-http-connections s-http-server) connections-to-remove))))))
+            (logm s-http-server :debug "Cleaning up ~s" connection)
+            (kill-connection connection))
+      (setf (get-http-connections s-http-server) 
+	    (set-difference (get-http-connections s-http-server) connections-to-remove)))))
 
 (defmethod cleanup-dead-connections ((s-http-server s-http-server))
   (cleanup-connections s-http-server
                        :filter (lambda (c)
                                  (or (eql (get-state c) :dead)
                                      (null (get-process c))
-                                     #+lispworks (not (mp:process-alive-p (get-process c)))))
-                       :do-not-pool t))
+                                     #+lispworks (not (mp:process-alive-p (get-process c)))))))
 
 (defmethod cleanup-old-connections ((s-http-server s-http-server))
   (let ((now (get-universal-time)))
@@ -352,26 +333,11 @@
                                    (and (eql (get-state c) :active)
                                         (< +allowed-connection-keepalive-age+ (- now (get-timestamp c))))))))
 
-(defmethod cleanup-old-pooled-connections ((s-http-server s-http-server))
-  (let ((now (get-universal-time)))
-    (cleanup-connections s-http-server
-                         :filter (lambda (c)
-                                   (and (eql (get-state c) :pooled)
-                                        (< +allowed-connection-pooled-age+ (- now (get-timestamp c)))))
-                         :do-not-pool t)))
-
-(defmethod cleanup-excess-pooled-connections ((s-http-server s-http-server))
-  (cleanup-connections s-http-server
-                       :filter (lambda (c) (eql (get-state c) :pooled))
-                       :threshold +allowed-pooled-connections+
-                       :do-not-pool t))
-
 (defmethod cleanup-excess-alive-connections ((s-http-server s-http-server))
   (cleanup-connections s-http-server
                        :filter (lambda (c) (eql (get-state c) :active))
                        :threshold +allowed-keepalive-connections+
-                       :selector (lambda (connections) (sort connections #'< :key #'get-timestamp))
-                       :do-not-pool t))
+                       :selector (lambda (connections) (sort connections #'< :key #'get-timestamp))))
 
 (defmethod flush-log-streams ((s-http-server s-http-server))
   (with-slots (log-stream access-log-stream) 
@@ -631,12 +597,8 @@
           (unless (ignore-errors 
                     (get-keep-alive (handle-one-http-request-response s-http-server http-connection)))
             (return))))
+     ;; kill is actually a cleanup
      (kill-connection http-connection)
-     (if +pool-connections+
-         (progn
-           (logm s-http-server :debug "Stopping ~s and waiting to be reused" http-connection)
-           #+lispworks(mp:process-stop (s-sysdeps:current-process) "Waiting to be reused")
-           #-lispworks(eror "Connection reuse not yet implemeted"))
-       (return)))))
+     (return))))
 
 ;;;; eof
